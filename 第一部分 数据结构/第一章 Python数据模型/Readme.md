@@ -151,3 +151,161 @@ for card in sorted(deck, key=spades_high):
 
 如果需要调用特殊方法，则最好调用相应的内置函数，例如len、iter、str等。这些内置函数不仅调用对应的特殊方法，通常还会提供额外服务，而且对于内置类型来说，速度比调用方法更快。
 
+
+> 暂时不加任何图示
+
+二维向量加法表示: Vector(2, 4) + Vector(2, 1) = Vector(4, 5)
+
+为了给这个类设计API，先写出模拟的控制台会话，作为doctest。以下代码测试向量加法
+
+```python
+from math import hypot
+
+class Vector:
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return "Vector(%r,%r)" % (self.x,self.y)
+
+    def __abs__(self):
+        return hypot(self.x,self.y)
+
+    def __bool__(self):
+        return bool(abs(self))
+
+    def __add__(self, other):
+        x = self.x + other.x
+        y = self.y + other.y
+        return Vector(x,y)
+
+    def __mul__(self, other):
+        return Vector(self.x * other, self.y * other)
+
+
+v1 = Vector(2, 4)
+v2 = Vector(2, 1)
+print(v1 + v2)  # Vector(4,5)
+```
+
+! 注意：+运算符的结果是一个新的Vector对象，在控制台中以友好的格式显示
+
+使用内置函数abs返回整数和浮点数的绝对值，以及复数的模。为了保持一致性，我们的API也使用abs函数计算向量的模
+
+```python
+v = Vector(3, 4)
+print(abs(v))  # 5.0
+```
+
+还可以实现*运算符，计算向量的标量积(一个向量乘以一个数，得到一个方向相同、模为一定倍数的新向量)
+
+```python
+print(v * 3)  # Vector(9,12)
+
+print(abs(v * 3))  # 15.0
+```
+
+> 示例1-2 一个简单的二维向量类
+
+使用__repr__、__abs__、__add__和__mul__等特殊方法为Vector类实现这几种运算
+
+##### 加法::
+
+```python
+v1 = Vector(3, 4)
+v2 = Vector(2, 1)
+print(v1 + v2)  # Vector(5,5)
+```
+
+##### 绝对值:: 
+
+```python
+v = Vector(3, 4)
+print(abs(v))  # 5.0
+```
+
+##### 标量积::
+
+```python
+print(v * 3)  # Vector(9,12)
+print(abs(v * 3))  # 15.0
+```
+
+以上Vector类除了我们熟悉的__init__方法，还实现了另外5个特殊方法。
+
+这些方法在类内部，或者在前面中的doctest中都没有直接调用。(特殊方法不需要手动调用，解释器自动调用)
+
+以上示例实现了+和*两个运算符，展示了__add__ 和 __mul__ 方法的基本用法。这两个方法创建并返回了一个新的Vector实例，没有修改运算对象，只是读取self或other。这是中辍运算符的预期行为，即创建新对象，不修改运算对象。
+
+
+特殊方法__repr__供内置函数repr调用，获取对象的字符串表示形式。如未定义__repr__方法，Vector实例将在Python控制台中不友好展示：<__main__.Vector object at 0x1082b7280>。
+
+交互式控制台和调试器在表达式求值结果上调用repr函数，处理方式与使用%运算符处理经典格式化方式中的%r占位符，以及使用str.format方法处理新字符串格式化句法中的!r转换字段一样。
+
+!注意：Vector类__repr__方法中的f字符串使用!r以标准的表示形式显示属性。这样做比较好，因为Vector(1, 2)和Vector("1", "2")之间是有区别的，后者在这个示例中不可用，因为构造函数接收数值而非字符串。
+
+__repr__方法返回的字符串应当没有歧义，如果可能，最好与源码保持一致，方便重新创建所表示的对象。鉴于此，我们才以类似构造函数的形式返回对象字符串的表示形式。
+
+与此形成对照的事，__str__方法由内置函数str()调用，在背后供print函数使用，返回对终端用户友好的字符串。
+
+有时，__repr__方法返回的字符串足够友好，无需再定义__str__方法，因为继承自object类的视线最终会调用__repr__方法。
+
+
+Python中有一个bool类型，在需要布尔值的地方处理对象，例如if或while语句的条件表达式，或者and、or和not的运算对象。为了确定x表示的值为真或为假，Python调用bool(x)，返回True或False
+
+默认情况下，用户定义类的实例都是真值，除非实现了__bool__或__len__方法。简单来说，bool(x)调用x__bool__()，以后者返回的结果为准。如果没有实现__bool__方法，则Python会尝试调用x__len__()；如果该方法返回零值，则bool函数返回False，否则返回True
+
+我们实现的__bool__方法没有用到什么高深的理论，如果向量的模为零，则返回False，否则返回True，我们使用bool(abs(self))把向量的模转换成布尔值，因为__bool__方法必须返回一个布尔值。在__bool__方法外部，很少需要显示的调用bool()，因为任何对象都可以在布尔值上下文中使用。
+
+```python
+Vector.__bool__也可以采用如下方式定义
+def __bool__(self):
+    return bool(self.x or self.y)
+
+# 这样定义虽然不易读懂，但是不用经过abs和__abs__的处理，也无须计算平方根平方根。使用bool显示转换是有必要的，因为__bool__方法必须返回一个布尔值。
+```
+
+抽象基类Collection(Python3.6新增)统一了这三个基本接口，每一个容器类型均应实现如下事项
+
++ Iterable要支持for、拆包和其它迭代方法
++ Sized要支持内置函数len
++ Container要支持in运算符
+
+Python不强制要求具体类继承这些抽象基类中的任何一个。只要实现了__len__方法就说明哪个类满足Size节课。
+
+Collection有3个十分重要的专用接口
+
++ Sequence规范list和str等内置类型的接口
++ Mapping被dict、collections.defaultdict等实现
++ Set是set和frozenset两个内置类型的接口
+
+只有Sequence实现了Reversible，因为序列要支持以任意顺序排列内容，而Mapping和Set不需要
+
+> 自Python3.7开始，dict类型变得有顺序了，不过只是保留键的插入顺序。你不能随意重新排列dict中的键
+
+Set抽象基类中的所有特殊方法实现的都是中辍运算符。例如，a & b计算集合a和b的交集，该运算符由__and__特殊方法实现。
+
+《Python语言参考手册》中的第三张列出了80多个特殊方法名称，其中一半以上用于实现算术运算符、按位运算符和比较运算法
+
+> 涉及太多自行查询双下划线函数
+
+
+##### len为什么不是方法？
+
+《Python之禅》中有一句话：实用胜过纯粹。当x是内置类型的实例时，len(x)运行速度非常的快！计算CPython内置对象的长度时不调用任何方法，而是直接读取C语言结构体中的字段。获取容器中的项数是一项常见操作，str、list、memoryview等各种基本的容器类型必须高效的完成这些工作。
+
+换句话说，len之所以不作为方法调用，是因为它经过了特殊处理，被当做Python数据模型的一部分，就像abs函数一样。但是借助特殊方法__len__，也可让len适用于自定义对象。这是一种相对公平的折中方案，既满足了内置对象对速度的要求，又保证了语言的一致性。这也体现了《Python之禅》中的另一句话："特殊情况不是打破规则的理由"
+
+> 忘掉面向对象语言中的方法调用，把abs和len看做一元运算符，说不定你更能接受它们表面上看似对函数的调用。Python源自ABC语言，很多特性都继承自ABC...
+
+
+##### 小结
+
+1. 借助特殊方法，自定义对象的行为可以像内置类型一样，让我们写出更具表现力的代码，符合社区所认可的Python风格。
+
+2. Python对象基本上都需要提供一个有用的字符串表示形式，在调试、登记日志和向终端用户表示时使用。鉴于此，数据模型中才有了__repr__和__str__两个特殊方法
+
+3. 模拟用户的行为(例如FrenchDeck示例)是特殊方法最常见的用途之一。比如说数据库代码返回的查询结果往往就是一个类似序列的容器。
+
+4. 得益于运算符重载，Python提供了丰富的数值类型，除内置的数值类型之外，还有decimal.Decimal和fractions.Fraction，全都支持中缀算术运算符。数据科学库NumPy还提供了矩阵和张量中的中缀运算符。
